@@ -8,7 +8,7 @@ import { getSessionId } from "@/lib/session";
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Frown, Meh, Smile } from "lucide-react";
+import { ArrowLeft, Frown, Meh, Smile, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -22,6 +22,15 @@ const MOODS = [
   { value: "stressed", label: "Stressed", icon: Frown, color: "text-orange-500" },
 ];
 
+const MOOD_COLORS: Record<string, string> = {
+  happy: "#22c55e",
+  calm: "#3b82f6",
+  anxious: "#eab308",
+  sad: "#a855f7",
+  angry: "#ef4444",
+  stressed: "#f97316",
+};
+
 export default function Mood() {
   const navigate = useNavigate();
   const { isLoading, isAuthenticated } = useAuth();
@@ -33,7 +42,8 @@ export default function Mood() {
   const [isSaving, setIsSaving] = useState(false);
 
   const createMoodEntry = useMutation(api.mood.createMoodEntry);
-  const moodEntries = useQuery(api.mood.getMoodEntries, { sessionId, limit: 7 });
+  const moodEntries = useQuery(api.mood.getMoodEntries, { sessionId, limit: 30 });
+  const moodStats = useQuery(api.mood.getMoodStats, { sessionId });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -76,9 +86,23 @@ export default function Mood() {
     );
   }
 
+  // Prepare chart data
+  const chartData = moodEntries
+    ?.slice()
+    .reverse()
+    .map((entry) => ({
+      date: new Date(entry.timestamp).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      intensity: entry.intensity,
+      mood: entry.mood,
+      timestamp: entry.timestamp,
+    })) || [];
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -96,6 +120,126 @@ export default function Mood() {
               <p className="text-muted-foreground">How are you feeling today?</p>
             </div>
           </div>
+
+          {/* Stats Overview */}
+          {moodStats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <Card className="p-4">
+                <div className="text-sm text-muted-foreground mb-1">Total Entries</div>
+                <div className="text-2xl font-bold">{moodStats.totalEntries}</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-sm text-muted-foreground mb-1">Avg Intensity</div>
+                <div className="text-2xl font-bold">{moodStats.avgIntensity}/10</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-sm text-muted-foreground mb-1">Most Common</div>
+                <div className="text-2xl font-bold capitalize">{moodStats.mostCommonMood}</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-sm text-muted-foreground mb-1">Trend</div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-500" />
+                  <span className="text-xl font-bold">Tracking</span>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* Mood Chart */}
+          {chartData.length > 0 && (
+            <Card className="p-6 mb-6">
+              <h2 className="text-xl font-bold tracking-tight mb-6">Mood Intensity Over Time</h2>
+              <div className="relative h-64">
+                <svg className="w-full h-full" viewBox="0 0 800 200">
+                  {/* Grid lines */}
+                  {[0, 2, 4, 6, 8, 10].map((value) => (
+                    <g key={value}>
+                      <line
+                        x1="40"
+                        y1={180 - value * 16}
+                        x2="780"
+                        y2={180 - value * 16}
+                        stroke="currentColor"
+                        strokeOpacity="0.1"
+                        strokeWidth="1"
+                      />
+                      <text
+                        x="25"
+                        y={185 - value * 16}
+                        fontSize="12"
+                        fill="currentColor"
+                        opacity="0.5"
+                      >
+                        {value}
+                      </text>
+                    </g>
+                  ))}
+
+                  {/* Line chart */}
+                  {chartData.length > 1 && (
+                    <polyline
+                      points={chartData
+                        .map((point, idx) => {
+                          const x = 60 + (idx * (720 / (chartData.length - 1)));
+                          const y = 180 - point.intensity * 16;
+                          return `${x},${y}`;
+                        })
+                        .join(" ")}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* Data points */}
+                  {chartData.map((point, idx) => {
+                    const x = 60 + (idx * (720 / Math.max(chartData.length - 1, 1)));
+                    const y = 180 - point.intensity * 16;
+                    return (
+                      <g key={idx}>
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="5"
+                          fill={MOOD_COLORS[point.mood] || "currentColor"}
+                          stroke="white"
+                          strokeWidth="2"
+                        />
+                        {idx % Math.ceil(chartData.length / 8) === 0 && (
+                          <text
+                            x={x}
+                            y="195"
+                            fontSize="10"
+                            fill="currentColor"
+                            opacity="0.5"
+                            textAnchor="middle"
+                          >
+                            {point.date}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+              
+              {/* Legend */}
+              <div className="flex flex-wrap gap-4 mt-6 justify-center">
+                {MOODS.map((mood) => (
+                  <div key={mood.value} className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: MOOD_COLORS[mood.value] }}
+                    />
+                    <span className="text-sm text-muted-foreground">{mood.label}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           <div className="grid md:grid-cols-2 gap-6">
             {/* Log Mood */}
@@ -170,8 +314,8 @@ export default function Mood() {
                   No mood entries yet. Start tracking!
                 </p>
               ) : (
-                <div className="space-y-4">
-                  {moodEntries.map((entry) => {
+                <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                  {moodEntries.slice(0, 7).map((entry) => {
                     const mood = MOODS.find((m) => m.value === entry.mood);
                     const Icon = mood?.icon || Meh;
                     return (
