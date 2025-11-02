@@ -2,6 +2,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { InstrumentationProvider } from "@/instrumentation.tsx";
 import AuthPage from "@/pages/Auth.tsx";
+import Chat from "@/pages/Chat.tsx";
+import Mood from "@/pages/Mood.tsx";
+import Journal from "@/pages/Journal.tsx";
+import Resources from "@/pages/Resources.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { StrictMode, useEffect } from "react";
@@ -52,6 +56,10 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<AuthPage redirectAfterAuth="/dashboard" />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/mood" element={<Mood />} />
+            <Route path="/journal" element={<Journal />} />
+            <Route path="/resources" element={<Resources />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
