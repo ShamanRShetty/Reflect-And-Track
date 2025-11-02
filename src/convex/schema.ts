@@ -2,7 +2,6 @@ import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { Infer, v } from "convex/values";
 
-// default user roles. can add / remove based on the project as needed
 export const ROLES = {
   ADMIN: "admin",
   USER: "user",
@@ -18,26 +17,106 @@ export type Role = Infer<typeof roleValidator>;
 
 const schema = defineSchema(
   {
-    // default auth tables using convex auth.
-    ...authTables, // do not remove or modify
+    ...authTables,
 
-    // the users table is the default users table that is brought in by the authTables
     users: defineTable({
-      name: v.optional(v.string()), // name of the user. do not remove
-      image: v.optional(v.string()), // image of the user. do not remove
-      email: v.optional(v.string()), // email of the user. do not remove
-      emailVerificationTime: v.optional(v.number()), // email verification time. do not remove
-      isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
+      name: v.optional(v.string()),
+      image: v.optional(v.string()),
+      email: v.optional(v.string()),
+      emailVerificationTime: v.optional(v.number()),
+      isAnonymous: v.optional(v.boolean()),
+      role: v.optional(roleValidator),
+      sessionId: v.optional(v.string()),
+    }).index("email", ["email"])
+      .index("by_sessionId", ["sessionId"]),
 
-      role: v.optional(roleValidator), // role of the user. do not remove
-    }).index("email", ["email"]), // index for the email. do not remove or modify
+    sessions: defineTable({
+      sessionId: v.string(),
+      userId: v.optional(v.id("users")),
+      conversationHistory: v.array(v.object({
+        role: v.string(),
+        content: v.string(),
+        timestamp: v.number(),
+        sentiment: v.optional(v.number()),
+      })),
+      language: v.optional(v.string()),
+      lastActive: v.number(),
+    }).index("by_sessionId", ["sessionId"])
+      .index("by_userId", ["userId"]),
 
-    // add other tables here
+    moodEntries: defineTable({
+      sessionId: v.string(),
+      userId: v.optional(v.id("users")),
+      mood: v.string(),
+      intensity: v.number(),
+      notes: v.optional(v.string()),
+      triggers: v.optional(v.array(v.string())),
+      activities: v.optional(v.array(v.string())),
+      timestamp: v.number(),
+    }).index("by_sessionId", ["sessionId"])
+      .index("by_userId", ["userId"])
+      .index("by_timestamp", ["timestamp"]),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    journalEntries: defineTable({
+      sessionId: v.string(),
+      userId: v.optional(v.id("users")),
+      title: v.string(),
+      content: v.string(),
+      mood: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
+      prompt: v.optional(v.string()),
+      timestamp: v.number(),
+    }).index("by_sessionId", ["sessionId"])
+      .index("by_userId", ["userId"])
+      .index("by_timestamp", ["timestamp"]),
+
+    crisisEvents: defineTable({
+      sessionId: v.string(),
+      userId: v.optional(v.id("users")),
+      severity: v.string(),
+      keywords: v.array(v.string()),
+      message: v.string(),
+      language: v.string(),
+      timestamp: v.number(),
+    }).index("by_sessionId", ["sessionId"])
+      .index("by_severity", ["severity"])
+      .index("by_timestamp", ["timestamp"]),
+
+    resources: defineTable({
+      title: v.string(),
+      description: v.string(),
+      category: v.string(),
+      type: v.string(),
+      url: v.optional(v.string()),
+      content: v.optional(v.string()),
+      tags: v.array(v.string()),
+      language: v.string(),
+      helpfulCount: v.number(),
+      viewCount: v.number(),
+    }).index("by_category", ["category"])
+      .index("by_type", ["type"])
+      .index("by_language", ["language"]),
+
+    assessments: defineTable({
+      sessionId: v.string(),
+      userId: v.optional(v.id("users")),
+      type: v.string(),
+      score: v.number(),
+      severity: v.string(),
+      answers: v.array(v.number()),
+      timestamp: v.number(),
+    }).index("by_sessionId", ["sessionId"])
+      .index("by_type", ["type"])
+      .index("by_timestamp", ["timestamp"]),
+
+    trustedContacts: defineTable({
+      sessionId: v.string(),
+      userId: v.optional(v.id("users")),
+      name: v.string(),
+      phone: v.string(),
+      relationship: v.string(),
+    }).index("by_sessionId", ["sessionId"])
+      .index("by_userId", ["userId"]),
   },
   {
     schemaValidation: false,
