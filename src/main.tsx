@@ -6,6 +6,7 @@ import Chat from "@/pages/Chat.tsx";
 import Mood from "@/pages/Mood.tsx";
 import Journal from "@/pages/Journal.tsx";
 import Resources from "@/pages/Resources.tsx";
+import Wellness from "@/pages/Wellness.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { StrictMode, useEffect } from "react";
@@ -60,6 +61,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/mood" element={<Mood />} />
             <Route path="/journal" element={<Journal />} />
             <Route path="/resources" element={<Resources />} />
+            <Route path="/wellness" element={<Wellness />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
